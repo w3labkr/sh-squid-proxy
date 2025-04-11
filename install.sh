@@ -2,7 +2,8 @@
 
 USERNAME="proxyuser"
 PASSWORD="proxy1234"
-PROXY_PORT="54821" # default port is 3128
+PROXY_PORT="54821" # The default port is 3128
+WHITELISTED_IPS=("127.0.0.1") # List of IPs to allow without authentication
 
 echo "[*] Installing Squid, Apache utils, UFW, Fail2Ban..."
 sudo apt update && sudo apt install -y squid apache2-utils ufw fail2ban
@@ -13,13 +14,22 @@ sudo htpasswd -bc /etc/squid/passwd $USERNAME $PASSWORD
 echo "[*] Backing up original Squid config..."
 sudo cp /etc/squid/squid.conf /etc/squid/squid.conf.bak
 
-echo "[*] Writing secure Squid config..."
+echo "[*] Writing secure Squid config with whitelist + auth..."
 sudo tee /etc/squid/squid.conf > /dev/null <<EOF
 auth_param basic program /usr/lib/squid/basic_ncsa_auth /etc/squid/passwd
 auth_param basic realm Squid Proxy Server
 acl authenticated proxy_auth REQUIRED
+EOF
+
+for ip in "${WHITELISTED_IPS[@]}"; do
+    echo "acl whitelist_ip src $ip" | sudo tee -a /etc/squid/squid.conf > /dev/null
+done
+
+sudo tee -a /etc/squid/squid.conf > /dev/null <<EOF
 
 http_port $PROXY_PORT
+
+http_access allow whitelist_ip
 http_access allow authenticated
 http_access deny all
 
@@ -93,6 +103,11 @@ echo "--------------------------------------------"
 echo " Proxy address:  http://<your-server-ip>:$PROXY_PORT"
 echo " Username:       $USERNAME"
 echo " Password:       $PASSWORD"
+echo ""
+echo " Whitelisted IPs:"
+for ip in "${WHITELISTED_IPS[@]}"; do
+    echo "  - $ip (no auth required)"
+done
 echo ""
 echo " Test it with:"
 echo " curl -x http://$USERNAME:$PASSWORD@<your-server-ip>:$PROXY_PORT http://ipinfo.io"
