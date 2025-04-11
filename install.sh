@@ -1,9 +1,9 @@
 #!/bin/bash
 
-USERNAME="proxyuser"
-PASSWORD="proxy1234"
-PROXY_PORT="54821" # The default port is 3128
-WHITELISTED_IPS=("127.0.0.1") # List of IPs to allow without authentication
+USERNAME="username"
+PASSWORD="password"
+PROXY_PORT="3128"
+WHITELISTED_IPS=("127.0.0.1")
 
 echo "[*] Installing Squid, Apache utils, UFW, Fail2Ban..."
 sudo apt update && sudo apt install -y squid apache2-utils ufw fail2ban

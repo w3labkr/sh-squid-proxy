@@ -6,7 +6,7 @@
 ## 주요 기능
 
 - **ID/PW 인증 기반 Squid 프록시 서버** 자동 설치
-- **포트 변경 기능** 제공 (기본 포트: `54821`) – 기본 포트 감지를 피하기 위해 유용
+- **포트 변경 기능** 제공 (기본 포트: `3128`) – 기본 포트 감지를 피하기 위해 유용
 - **30일간 로그 보관** (logrotate 적용)
 - **Fail2ban을 통한 보안 강화** – SSH 브루트포스 공격 차단
 - **프록시 헤더 제거**를 통한 익명성 향상
@@ -18,25 +18,39 @@
 
 ```bash
 # Git 설치 (필요한 경우)
-sudo apt update && sudo apt install -y git
+$ sudo apt update && sudo apt install -y git
 
 # 저장소 클론
-git clone https://github.com/w3labkr/sh-squid-proxy.git
-cd sh-squid-proxy
+$ git clone https://github.com/w3labkr/sh-squid-proxy.git
+$ cd sh-squid-proxy
 
 # 실행 권한 부여 및 설치
-chmod +x install.sh
-./install.sh
+$ chmod +x install.sh
+$ vim ./install.sh
+USERNAME="username"
+PASSWORD="password"
+PROXY_PORT="3128"
+WHITELISTED_IPS=("127.0.0.1")
+
+$ ./install.sh
 ```
 
 ## 기본 프록시 정보
 
 `install.sh` 파일을 수정하여 사용자명과 포트를 자유롭게 변경할 수 있습니다.
 
-- 프록시 주소: http://<서버 IP>:54821
-- 사용자명: proxyuser
-- 비밀번호: proxy1234
+- 프록시 주소: http://<서버 IP>:3128
+- 프록시 포트: 3128
+- 사용자명: username
+- 비밀번호: password
 - 화이트리스트: 127.0.0.1
+
+우분투서버에서 랜덤 비밀번호 생성하기:
+
+```shell
+echo "PASSWORD: $(< /dev/urandom tr -dc 'A-Za-z0-9' | head -c 16)"
+# fU7nKp2L3qV9zR1a
+```
 
 ## 자주 사용하는 프록시 포트
 
@@ -57,7 +71,7 @@ chmod +x install.sh
 ### Curl을 이용한 테스트
 
 ```bash
-curl -x http://proxyuser:proxy1234@<서버 IP>:54821 http://ipinfo.io
+curl -x http://proxyuser:proxy1234@<서버 IP>:3128 http://ipinfo.io
 ```
 
 ### Python requests 사용 예
@@ -66,8 +80,8 @@ curl -x http://proxyuser:proxy1234@<서버 IP>:54821 http://ipinfo.io
 import requests
 
 proxies = {
-    "http": "http://proxyuser:proxy1234@<서버 IP>:54821",
-    "https": "http://proxyuser:proxy1234@<서버 IP>:54821"
+    "http": "http://proxyuser:proxy1234@<서버 IP>:3128",
+    "https": "http://proxyuser:proxy1234@<서버 IP>:3128"
 }
 
 res = requests.get("http://ipinfo.io", proxies=proxies)
