@@ -1,8 +1,8 @@
 #!/bin/bash
 
-USERNAME="username"
-PASSWORD="password"
 PROXY_PORT="3128"
+USERNAME="ghost"
+PASSWORD="password"
 WHITELISTED_IPS=("127.0.0.1")
 
 echo "[*] Installing Squid, Apache utils, UFW, Fail2Ban..."
