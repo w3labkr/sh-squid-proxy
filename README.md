@@ -35,8 +35,8 @@ sudo apt update -y && sudo apt install -y git
 **Clone the repository:**
 
 ```bash
-git clone https://github.com/w3labkr/sh-squid-proxy.git
-cd sh-squid-proxy
+git clone https://github.com/w3labkr/sh-squid-proxy-installer.git
+cd sh-squid-proxy-installer
 ```
 
 **Make the script executable:**
@@ -177,16 +177,16 @@ To automatically clone and install this repository, you can use the **startup sc
 #!/bin/bash
 
 # Update packages and install Git
-apt update -y && apt install -y git
+sudo apt update -y && sudo apt install -y git
 
-# Move to root directory
-cd /root || exit
+# Move to home directory
+cd ~ || exit
 
 # Clone the repository
-git clone https://github.com/w3labkr/sh-squid-proxy.git
+git clone https://github.com/w3labkr/sh-squid-proxy-installer.git
 
 # Enter the directory
-cd sh-squid-proxy || exit
+cd sh-squid-proxy-installer || exit
 
 # Make the install script executable
 chmod +x install.sh
