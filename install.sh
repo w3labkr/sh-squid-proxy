@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # Usage:
-# ./squid_setup.sh --port 3128 --username ghost --password 'password' --whitelist "127.0.0.1,192.168.1.100"
+# ./install.sh --port 3128 --username ghost --password '123456' --whitelist "127.0.0.1,192.168.1.100"
 #
 # Default values:
 PROXY_PORT="3128"
 USERNAME="ghost"
-PASSWORD="password"
+PASSWORD="123456"
 WHITELISTED_IPS="127.0.0.1"
 
 # Parse command-line arguments
@@ -15,8 +15,8 @@ while [[ $# -gt 0 ]]; do
   case $key in
     --port)
       PROXY_PORT="$2"
-      shift # skip --port
-      shift # skip port value
+      shift
+      shift
       ;;
     --username)
       USERNAME="$2"
@@ -135,10 +135,12 @@ sudo systemctl enable squid
 echo "[*] Setting up auto-restart with crontab..."
 (crontab -l 2>/dev/null; echo "*/30 * * * * systemctl is-active squid || sudo systemctl restart squid") | crontab -
 
+SERVER_IP=$(curl -4 -s ifconfig.me)
+
 echo ""
 echo "Setup complete!"
 echo "--------------------------------------------"
-echo " Proxy address:  http://<your-server-ip>:$PROXY_PORT"
+echo " Proxy address:  http://$SERVER_IP:$PROXY_PORT"
 echo " Username:       $USERNAME"
 echo " Password:       $PASSWORD"
 echo ""
@@ -148,6 +150,6 @@ for ip in "${WHITELISTED_IPS_ARRAY[@]}"; do
 done
 echo ""
 echo " Test it with:"
-echo " curl -x http://$USERNAME:$PASSWORD@<your-server-ip>:$PROXY_PORT http://ipinfo.io"
+echo " curl -x http://$USERNAME:$PASSWORD@$SERVER_IP:$PROXY_PORT http://ipinfo.io"
 echo "--------------------------------------------"
 echo ""
