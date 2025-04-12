@@ -1,94 +1,110 @@
 # Squid Proxy Installer
 
-This project provides a script that **automatically installs a Squid proxy server** on **Ubuntu-based Linux systems**. It supports **ID/password authentication**, making it highly reliable even in environments with dynamic IP addresses. The script also includes a number of features that are particularly useful for real-world web crawling and proxy server operations.
+This project provides a script that automatically installs a Squid proxy server on Ubuntu-based Linux systems. It supports username/password authentication, making it highly reliable even in dynamic IP environments. The script is also packed with useful features for real-world web crawling and proxy operations.
 
 ## Key Features
 
-- **Automated installation** of a Squid proxy server with **ID/password authentication**
-- **Customizable proxy port** (default: `3128`) – useful for avoiding detection on common ports
-- **30-day log retention** using `logrotate`
-- **Enhanced SSH security** with `Fail2ban` – helps prevent brute-force login attempts
-- **Header stripping** for improved anonymity
-- **Automatic service recovery** on failure via `crontab`
+- **Automated Installation:** Installs and configures a Squid proxy server with username/password authentication.
+- **Customizable Settings via Command-Line Flags:**
+  - `--port` (short option: `-t`): Set the proxy port (default: `3128`).
+  - `--username` (short option: `-u`): Set the authentication username (default: `ghost`).
+  - `--password` (short option: `-p`): Set the authentication password (default: `123456`).
+  - `--whitelist` (short option: `-w`): Comma-separated list of IP addresses that bypass authentication (default: `127.0.0.1`).
+- **Automatic Public IPv4 Detection:** Uses `curl -4 -s ifconfig.me` to automatically retrieve and display the server’s public IPv4 address.
+- **30-Day Log Retention:** Configured via `logrotate` for efficient log management.
+- **Enhanced SSH Security:** Implements Fail2ban to help prevent brute-force login attempts.
+- **HTTP Header Stripping:** Improves anonymity by removing unnecessary HTTP headers.
+- **Automatic Service Recovery:** A cron job monitors the Squid service and restarts it if it stops unexpectedly.
 
 ## Installation
 
-Install Git (if not already installed)
+### System Requirements
+
+- Ubuntu 20.04 / 22.04 / 24.04 or later.
+- A server with a public IPv4 address (e.g., VPS or cloud instance).
+- A user account with sudo privileges.
+
+### Installation Steps
+
+**Install Git:**
 
 ```bash
 sudo apt update && sudo apt install -y git
 ```
 
-Clone the repository
+**Clone the repository:**
 
 ```bash
 git clone https://github.com/w3labkr/sh-squid-proxy.git
 cd sh-squid-proxy
 ```
 
-Make the script executable and configure the settings
+**Make the script executable:**
 
 ```bash
 chmod +x install.sh
 ```
 
-To generate a random password on Ubuntu:
+## Usage
+
+The script supports both long and short command-line options to customize the installation. If no flags are provided, default values will be applied.
+
+### Command-Line Options
+
+- **Long Options:**
+  - `--port`: Proxy port (default: `3128`)
+  - `--username`: Authentication username (default: `ghost`)
+  - `--password`: Authentication password (default: `123456`)
+  - `--whitelist`: Comma-separated list of IP addresses that can bypass authentication (default: `127.0.0.1`)
+- **Short Options:**
+  - `-t`: Proxy port
+  - `-u`: Authentication username
+  - `-p`: Authentication password
+  - `-w`: Whitelist IPs
+
+**Example:**
 
 ```bash
-echo "PASSWORD: $(< /dev/urandom tr -dc 'A-Za-z0-9' | head -c 16)"
+./install.sh --port 3128 --username ghost --password '123456' --whitelist "127.0.0.1,192.168.1.100"
 ```
 
-You can edit the `install.sh` script to change the username, password, and proxy port before installation.
+Or using short options:
 
 ```bash
-$ vim ./install.sh
-PROXY_PORT="3128"
-USERNAME="ghost"
-PASSWORD="password"
-WHITELISTED_IPS=("127.0.0.1")
+./install.sh -t 3128 -u ghost -p '123456' -w "127.0.0.1,192.168.1.100"
 ```
 
-Run the installer
+During execution, the script automatically detects your server’s public IPv4 address and incorporates it into the output for easy proxy configuration.
 
-```bash
-./install.sh
-```
+## Post-Installation Configuration
 
-## Configuration
-
-After installation, you can update authentication details, whitelist IPs, or change the proxy port at any time.
+You can update authentication details, modify the whitelist IPs, or change the proxy port at any time.
 
 ### Update Username / Password
 
-To add a new user:
+**To add a new user:**
 
 ```bash
 sudo htpasswd /etc/squid/passwd newuser
 ```
 
-To remove a user, edit the password file manually:
-
-```bash
-sudo vim /etc/squid/passwd
-```
-
-To change a user's password:
+**To change an existing user's password:**
 
 ```bash
 sudo htpasswd /etc/squid/passwd ghost
 ```
 
-> Changes take effect immediately—no need to restart the service.
+*Changes are applied immediately without the need to restart the Squid service.*
 
 ### Modify Whitelisted IPs
 
-Edit the Squid configuration file at `/etc/squid/squid.conf`:
+Edit the Squid configuration file at `/etc/squid/squid.conf`. For example:
 
 ```conf
 acl whitelist_ip src 127.0.0.1
 ```
 
-To add multiple IPs:
+To add multiple IPs, list them as separate ACL entries:
 
 ```conf
 acl whitelist_ip src 127.0.0.1
@@ -96,29 +112,15 @@ acl whitelist_ip src 123.123.123.123
 acl whitelist_ip src 45.67.89.101
 ```
 
-Apply changes by restarting Squid:
+Apply the changes by restarting Squid:
 
 ```bash
 sudo systemctl restart squid
 ```
 
-### Change Proxy Port
+### Change the Proxy Port
 
-Common Proxy Ports
-
-| Port Number | Description                          |
-|-------------|--------------------------------------|
-| 3128        | Default Squid proxy port             |
-| 8080        | Common HTTP proxy port               |
-| 8888        | Often used for development/testing   |
-| 8000        | Common for local web servers         |
-| 1080        | Typical SOCKS4/5 proxy port          |
-| 443         | Standard HTTPS port                  |
-| 50000       | High-numbered port for local testing |
-| 54321       | Easy-to-remember test port           |
-| 60000       | Great for custom proxy setups        |
-
-Open `/etc/squid/squid.conf` and update the port setting:
+Update the `http_port` setting in `/etc/squid/squid.conf`:
 
 ```conf
 http_port 3128 → http_port 8888
@@ -128,10 +130,10 @@ Allow the new port through your firewall:
 
 ```bash
 sudo ufw allow 8888
-sudo ufw delete allow 3128  # Optional: remove old port rule
+sudo ufw delete allow 3128  # (optional: remove the old rule)
 ```
 
-Then restart the Squid service:
+Restart the Squid service:
 
 ```bash
 sudo systemctl restart squid
@@ -139,40 +141,35 @@ sudo systemctl restart squid
 
 ## Example Usage
 
-Using `curl`:
+### Using cURL
 
 ```bash
-curl -x http://ghost:password@<your-server-ip>:3128 http://ipinfo.io
+curl -x http://ghost:123456@<your-server-ip>:3128 http://ipinfo.io
 ```
 
-Using Python `requests`:
+### Using Python requests
 
 ```python
 import requests
 
 proxies = {
-    "http": "http://ghost:password@<your-server-ip>:3128",
-    "https": "http://ghost:password@<your-server-ip>:3128"
+    "http": "http://ghost:123456@<your-server-ip>:3128",
+    "https": "http://ghost:123456@<your-server-ip>:3128"
 }
 
-res = requests.get("http://ipinfo.io", proxies=proxies)
-print(res.text)
+response = requests.get("http://ipinfo.io", proxies=proxies)
+print(response.text)
 ```
 
-## System Requirements
+## Additional Information
 
-- Ubuntu 20.04 / 22.04 / 24.04 or later
-- A server with a public IP address (e.g., VPS or cloud instance)
-- A user account with `sudo` privileges
-
-## Security & Operational Tips
-
-- It’s recommended to change the default SSH port and use key-based SSH authentication.
-- `Fail2ban` is pre-configured to protect SSH access.
-- For high-traffic environments, consider setting connection limits.
-- On public or multi-user servers, implement strict access controls.
+- **UFW Configuration:** The script configures UFW to allow both OpenSSH and the specified proxy port.
+- **Log Management:** Uses logrotate to retain log files for 30 days.
+- **Service Recovery:** A cron job continuously monitors the Squid service and automatically restarts it when needed.
+- **Public IP Auto-Detection:** The script retrieves your server’s public IPv4 address with `curl -4 -s ifconfig.me` for easy setup.
+- **Script Exit:** The script ends with an `exit 0`, ensuring that successful execution is clearly indicated.
 
 ## License
 
 This project is licensed under the [MIT License](LICENSE).  
-Feel free to use and modify the script, but do so at your own risk.
+Feel free to use and modify the script as needed.
