@@ -144,7 +144,7 @@ sudo systemctl restart squid
 ### Using cURL
 
 ```bash
-curl -x http://ghost:123456@<your-server-ip>:3128 http://ipinfo.io
+curl -x http://ghost:123456@<proxy_server_ip>:3128 http://ipinfo.io
 ```
 
 ### Using Python requests
@@ -153,8 +153,8 @@ curl -x http://ghost:123456@<your-server-ip>:3128 http://ipinfo.io
 import requests
 
 proxies = {
-    "http": "http://ghost:123456@<your-server-ip>:3128",
-    "https": "http://ghost:123456@<your-server-ip>:3128"
+    "http": "http://ghost:123456@<proxy_server_ip>:3128",
+    "https": "http://ghost:123456@<proxy_server_ip>:3128"
 }
 
 response = requests.get("http://ipinfo.io", proxies=proxies)
@@ -200,7 +200,7 @@ chmod +x install.sh
 Test the Proxy Server
 
 ```bash
-curl -x http://ghost:123456@<your-server-ip>:3128 http://ipinfo.io
+curl -x http://ghost:123456@<proxy_server_ip>:3128 http://ipinfo.io
 ```
 
 ## License
