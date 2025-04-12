@@ -195,6 +195,14 @@ chmod +x install.sh
 ./install.sh -t 3128 -u ghost -p '123456' -w "127.0.0.1"
 ```
 
+> Don't forget to update your firewall settings to allow network access as needed.
+
+Test the Proxy Server
+
+```bash
+curl -x http://ghost:123456@<your-server-ip>:3128 http://ipinfo.io
+```
+
 ## License
 
 This project is licensed under the [MIT License](LICENSE).  
