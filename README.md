@@ -29,7 +29,7 @@ This project provides a script that automatically installs a Squid proxy server 
 **Install Git:**
 
 ```bash
-sudo apt update && sudo apt install -y git
+sudo apt update -y && sudo apt install -y git
 ```
 
 **Clone the repository:**
@@ -168,6 +168,32 @@ print(response.text)
 - **Service Recovery:** A cron job continuously monitors the Squid service and automatically restarts it when needed.
 - **Public IP Auto-Detection:** The script retrieves your server’s public IPv4 address with `curl -4 -s ifconfig.me` for easy setup.
 - **Script Exit:** The script ends with an `exit 0`, ensuring that successful execution is clearly indicated.
+
+## Auto Setup with Startup Script
+
+To automatically clone and install this repository, you can use the **startup script** feature provided by cloud platforms during instance creation.
+
+```bash
+#!/bin/bash
+
+# Update packages and install Git
+apt update -y && apt install -y git
+
+# Move to root directory
+cd /root || exit
+
+# Clone the repository
+git clone https://github.com/w3labkr/sh-squid-proxy.git
+
+# Enter the directory
+cd sh-squid-proxy || exit
+
+# Make the install script executable
+chmod +x install.sh
+
+# Run the install script with desired options
+./install.sh -t 3128 -u ghost -p '123456' -w "127.0.0.1"
+```
 
 ## License
 
