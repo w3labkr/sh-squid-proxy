@@ -2,6 +2,8 @@
 
 # Usage:
 # ./install.sh --port 3128 --username ghost --password '123456' --whitelist "127.0.0.1,192.168.1.100"
+# or with short options:
+# ./install.sh -t 3128 -u ghost -p '123456' -w "127.0.0.1,192.168.1.100"
 #
 # Default values:
 PROXY_PORT="3128"
@@ -9,29 +11,25 @@ USERNAME="ghost"
 PASSWORD="123456"
 WHITELISTED_IPS="127.0.0.1"
 
-# Parse command-line arguments
+# Parse command-line arguments with both long and short options
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
-    --port)
+    -t|--port)
       PROXY_PORT="$2"
-      shift
-      shift
+      shift 2
       ;;
-    --username)
+    -u|--username)
       USERNAME="$2"
-      shift
-      shift
+      shift 2
       ;;
-    --password)
+    -p|--password)
       PASSWORD="$2"
-      shift
-      shift
+      shift 2
       ;;
-    --whitelist)
+    -w|--whitelist)
       WHITELISTED_IPS="$2"
-      shift
-      shift
+      shift 2
       ;;
     *)
       echo "Unknown option: $key"
@@ -153,3 +151,5 @@ echo " Test it with:"
 echo " curl -x http://$USERNAME:$PASSWORD@$SERVER_IP:$PROXY_PORT http://ipinfo.io"
 echo "--------------------------------------------"
 echo ""
+
+exit 0
