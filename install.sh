@@ -1,15 +1,53 @@
 #!/bin/bash
 
+# Usage:
+# ./squid_setup.sh --port 3128 --username ghost --password 'password' --whitelist "127.0.0.1,192.168.1.100"
+#
+# Default values:
 PROXY_PORT="3128"
 USERNAME="ghost"
 PASSWORD="password"
-WHITELISTED_IPS=("127.0.0.1")
+WHITELISTED_IPS="127.0.0.1"
+
+# Parse command-line arguments
+while [[ $# -gt 0 ]]; do
+  key="$1"
+  case $key in
+    --port)
+      PROXY_PORT="$2"
+      shift # skip --port
+      shift # skip port value
+      ;;
+    --username)
+      USERNAME="$2"
+      shift
+      shift
+      ;;
+    --password)
+      PASSWORD="$2"
+      shift
+      shift
+      ;;
+    --whitelist)
+      WHITELISTED_IPS="$2"
+      shift
+      shift
+      ;;
+    *)
+      echo "Unknown option: $key"
+      exit 1
+      ;;
+  esac
+done
+
+# Convert comma-separated whitelist IPs string to an array
+IFS=',' read -ra WHITELISTED_IPS_ARRAY <<< "$WHITELISTED_IPS"
 
 echo "[*] Installing Squid, Apache utils, UFW, Fail2Ban..."
 sudo apt update && sudo apt install -y squid apache2-utils ufw fail2ban
 
 echo "[*] Creating authentication credentials..."
-sudo htpasswd -bc /etc/squid/passwd $USERNAME $PASSWORD
+sudo htpasswd -bc /etc/squid/passwd "$USERNAME" "$PASSWORD"
 
 echo "[*] Backing up original Squid config..."
 sudo cp /etc/squid/squid.conf /etc/squid/squid.conf.bak
@@ -21,7 +59,7 @@ auth_param basic realm Squid Proxy Server
 acl authenticated proxy_auth REQUIRED
 EOF
 
-for ip in "${WHITELISTED_IPS[@]}"; do
+for ip in "${WHITELISTED_IPS_ARRAY[@]}"; do
     echo "acl whitelist_ip src $ip" | sudo tee -a /etc/squid/squid.conf > /dev/null
 done
 
@@ -70,7 +108,7 @@ EOF
 
 echo "[*] Configuring UFW firewall..."
 sudo ufw allow OpenSSH
-sudo ufw allow $PROXY_PORT
+sudo ufw allow "$PROXY_PORT"
 sudo ufw --force enable
 
 echo "[*] Setting up logrotate for 30-day retention..."
@@ -105,7 +143,7 @@ echo " Username:       $USERNAME"
 echo " Password:       $PASSWORD"
 echo ""
 echo " Whitelisted IPs:"
-for ip in "${WHITELISTED_IPS[@]}"; do
+for ip in "${WHITELISTED_IPS_ARRAY[@]}"; do
     echo "  - $ip (no auth required)"
 done
 echo ""
