@@ -41,8 +41,8 @@ done
 # Convert comma-separated whitelist IPs string to an array
 IFS=',' read -ra WHITELISTED_IPS_ARRAY <<< "$WHITELISTED_IPS"
 
-echo "[*] Installing Squid, Apache utils, UFW, Fail2Ban..."
-sudo apt update && sudo apt install -y squid apache2-utils ufw fail2ban
+echo "[*] Installing Squid and Apache utils..."
+sudo apt update && sudo apt install -y squid apache2-utils
 
 echo "[*] Creating authentication credentials..."
 sudo htpasswd -bc /etc/squid/passwd "$USERNAME" "$PASSWORD"
@@ -103,11 +103,6 @@ request_header_access User-Agent allow all
 request_header_access Cookie deny all
 request_header_access Referer deny all
 EOF
-
-echo "[*] Configuring UFW firewall..."
-sudo ufw allow OpenSSH
-sudo ufw allow "$PROXY_PORT"
-sudo ufw --force enable
 
 echo "[*] Setting up logrotate for 30-day retention..."
 sudo tee /etc/logrotate.d/squid > /dev/null <<EOF
