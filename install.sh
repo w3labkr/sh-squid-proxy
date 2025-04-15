@@ -1,22 +1,28 @@
 #!/bin/bash
+set -e
 
 # Usage:
-# ./install.sh --port 3128 --username ghost --password '123456' --whitelist "127.0.0.1,192.168.1.100"
+# ./install.sh --port 3128 --https-port 3129 --username ghost --password '123456' --whitelist "127.0.0.1,192.168.1.100"
 # or with short options:
-# ./install.sh -t 3128 -u ghost -p '123456' -w "127.0.0.1,192.168.1.100"
-#
-# Default values:
-PROXY_PORT="3128"
+# ./install.sh -t 3128 -s 3129 -u ghost -p '123456' -w "127.0.0.1,192.168.1.100"
+
+# Default values
+HTTP_PORT="3128"
+HTTPS_PORT="3129"
 USERNAME="ghost"
 PASSWORD="123456"
 WHITELISTED_IPS="127.0.0.1"
 
-# Parse command-line arguments with both long and short options
+# Parse arguments
 while [[ $# -gt 0 ]]; do
   key="$1"
   case $key in
     -t|--port)
-      PROXY_PORT="$2"
+      HTTP_PORT="$2"
+      shift 2
+      ;;
+    -s|--https-port)
+      HTTPS_PORT="$2"
       shift 2
       ;;
     -u|--username)
@@ -38,11 +44,21 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# Convert comma-separated whitelist IPs string to an array
 IFS=',' read -ra WHITELISTED_IPS_ARRAY <<< "$WHITELISTED_IPS"
 
-echo "[*] Installing Squid and Apache utils..."
-sudo apt update && sudo apt install -y squid apache2-utils
+echo "[*] Installing Squid and dependencies..."
+if ! command -v apt &>/dev/null; then
+  echo "This script supports only Ubuntu/Debian (apt)."
+  exit 1
+fi
+sudo apt update && sudo apt install -y squid-openssl apache2-utils openssl
+
+echo "[*] Generating SSL certificate..."
+SSL_DIR="/etc/squid/ssl_cert"
+sudo mkdir -p $SSL_DIR
+sudo openssl req -new -newkey rsa:2048 -days 365 -nodes -x509 \
+  -keyout $SSL_DIR/squid.key -out $SSL_DIR/squid.crt \
+  -subj "/C=KR/ST=Seoul/L=Seoul/O=Proxy/CN=squidproxy.local"
 
 echo "[*] Creating authentication credentials..."
 sudo htpasswd -bc /etc/squid/passwd "$USERNAME" "$PASSWORD"
@@ -50,28 +66,23 @@ sudo htpasswd -bc /etc/squid/passwd "$USERNAME" "$PASSWORD"
 echo "[*] Backing up original Squid config..."
 sudo cp /etc/squid/squid.conf /etc/squid/squid.conf.bak
 
-echo "[*] Writing secure Squid config with whitelist + auth..."
+echo "[*] Writing new Squid config..."
 sudo tee /etc/squid/squid.conf > /dev/null <<EOF
 auth_param basic program /usr/lib/squid/basic_ncsa_auth /etc/squid/passwd
 auth_param basic realm Squid Proxy Server
 acl authenticated proxy_auth REQUIRED
-EOF
-
-for ip in "${WHITELISTED_IPS_ARRAY[@]}"; do
-    echo "acl whitelist_ip src $ip" | sudo tee -a /etc/squid/squid.conf > /dev/null
-done
-
-sudo tee -a /etc/squid/squid.conf > /dev/null <<EOF
-
-http_port $PROXY_PORT
+acl whitelist_ip src $(IFS=" "; echo "${WHITELISTED_IPS_ARRAY[*]}")
+http_port $HTTP_PORT
+https_port $HTTPS_PORT cert=$SSL_DIR/squid.crt key=$SSL_DIR/squid.key
 
 http_access allow whitelist_ip
 http_access allow authenticated
 http_access deny all
 
+cache deny all
+cache_dir null /tmp
 access_log /var/log/squid/access.log
 
-# Anonymous headers (privacy protection)
 via off
 forwarded_for delete
 request_header_access Allow allow all
@@ -104,7 +115,7 @@ request_header_access Cookie deny all
 request_header_access Referer deny all
 EOF
 
-echo "[*] Setting up logrotate for 30-day retention..."
+echo "[*] Setting up logrotate..."
 sudo tee /etc/logrotate.d/squid > /dev/null <<EOF
 /var/log/squid/*.log {
     daily
@@ -121,19 +132,21 @@ sudo tee /etc/logrotate.d/squid > /dev/null <<EOF
 }
 EOF
 
-echo "[*] Enabling and restarting Squid..."
+echo "[*] Restarting and enabling Squid..."
 sudo systemctl restart squid
 sudo systemctl enable squid
 
 echo "[*] Setting up auto-restart with crontab..."
-(crontab -l 2>/dev/null; echo "*/30 * * * * systemctl is-active squid || sudo systemctl restart squid") | crontab -
+CRON_JOB="*/30 * * * * systemctl is-active squid || systemctl restart squid"
+( crontab -l 2>/dev/null | grep -v 'systemctl is-active squid' ; echo "$CRON_JOB" ) | crontab -
 
 SERVER_IP=$(curl -4 -s ifconfig.me)
 
 echo ""
 echo "Setup complete!"
 echo "--------------------------------------------"
-echo " Proxy address:  http://$SERVER_IP:$PROXY_PORT"
+echo " HTTP Proxy:     http://$SERVER_IP:$HTTP_PORT"
+echo " HTTPS Proxy:    https://$SERVER_IP:$HTTPS_PORT"
 echo " Username:       $USERNAME"
 echo " Password:       $PASSWORD"
 echo ""
@@ -143,7 +156,8 @@ for ip in "${WHITELISTED_IPS_ARRAY[@]}"; do
 done
 echo ""
 echo " Test it with:"
-echo " curl -x http://$USERNAME:$PASSWORD@$SERVER_IP:$PROXY_PORT http://ipinfo.io"
+echo " curl -x http://$USERNAME:$PASSWORD@$SERVER_IP:$HTTP_PORT http://ipinfo.io"
+echo " curl -k -x https://$USERNAME:$PASSWORD@$SERVER_IP:$HTTPS_PORT https://ipinfo.io"
 echo "--------------------------------------------"
 echo ""
 
